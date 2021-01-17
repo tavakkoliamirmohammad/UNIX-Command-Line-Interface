@@ -53,7 +53,7 @@ string &trim(std::string &s, const char *t = " \t\n\r\f\v") {
     return ltrim(rtrim(s, t), t);
 }
 
-void show_error_command(vector<char *> args) {
+void show_error_command(const vector<char *> &args) {
     write_stderr(args[0]);
     write_stderr(": ");
     write_stderr(strerror(errno));
@@ -149,7 +149,7 @@ pid_t get_nth_background_process(unordered_map<pid_t, string> &background_proces
     return -1;
 }
 
-void change_directory(vector<char *> args){
+void change_directory(vector<char *> args) {
     if (args.size() > 1 && args[1]) {
         int res = chdir(args[1]);
         if (res == -1) {
@@ -160,6 +160,19 @@ void change_directory(vector<char *> args){
         if (res == -1) {
             show_error_command(args);
         }
+    }
+}
+
+void show_current_directory(vector<char *> args) {
+    char temp[MAX_SIZE];
+    char *res;
+    res = getcwd(temp, MAX_SIZE);
+    if (res != nullptr) {
+        string message = string(temp);
+        message += "\n";
+        write_stdout(message);
+    } else {
+        show_error_command(args);
     }
 }
 
@@ -177,11 +190,7 @@ void execute_commands(const vector<string> &commands, unordered_map<pid_t, strin
         if (file == "cd") {
             change_directory(arguments);
         } else if (file == "pwd") {
-            char temp[MAX_SIZE];
-            getcwd(temp, MAX_SIZE);
-            string message = string(temp);
-            message += "\n";
-            write_stdout(message);
+            show_current_directory(arguments);
         } else if (file == "exit") {
             exit(0);
         } else if (file == "bglist") {
