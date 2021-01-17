@@ -51,6 +51,13 @@ string &trim(std::string &s, const char *t = " \t\n\r\f\v") {
     return ltrim(rtrim(s, t), t);
 }
 
+void show_error_command(vector<char *> args) {
+    write_stderr(args[0]);
+    write_stderr(": ");
+    write_stderr(strerror(errno));
+    write_stderr("\n");
+}
+
 vector<string> tokenize_string(string line, const string &delimiter) {
     size_t pos;
     std::string token;
@@ -71,15 +78,15 @@ void foreground_process(vector<char *> args) {
         exit_with_message("Error: Fork failed!", 1);
     } else if (pid == 0) {
         execvp(args[0], &args[0]);
-        write_stdout(strerror(errno));
-        write_stdout("\n");
-//        exit(1);
+        show_error_command(args);
+        exit(0);
     } else {
         waitpid(pid, &status, WUNTRACED);
         int child_return_code = WEXITSTATUS(status);
-        if (child_return_code != 0) {
-            exit_with_message("Error: failed", 2);
-        }
+        cout << child_return_code << endl;
+//        if (child_return_code != 0) {
+//            exit_with_message("Error: failed", 2);
+//        }
     }
 }
 
@@ -94,8 +101,7 @@ void background_process(vector<char *> args, int &background_process, int maximu
         exit_with_message("Error: Fork failed!", 1);
     } else if (pid == 0) {
         execvp(args[1], &args[1]);
-        write_stdout(strerror(errno));
-        write_stdout("\n");
+        show_error_command(vector<char *>(args.begin() + 1, args.end()));
 //        exit(1);
     } else {
         write_stdout("Background process with " + to_string(pid) + " Executing\n");
@@ -123,7 +129,8 @@ void execute_commands(const vector<string> &commands, int &background_process_nu
         if (file == "cd") {
             if (arguments.size() > 1 && arguments[1]) {
                 chdir(arguments[1]);
-//                TODO check result
+                show_error_command(arguments);
+//               TODO check result
             } else {
                 chdir(getenv("HOME"));
             }
