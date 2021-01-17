@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sys/wait.h>
 #include <regex>
+#include "colors.h"
 
 using namespace std;
 
@@ -37,8 +38,9 @@ char hostname[MAX_SIZE];
 void write_shell_prefix() {
     std::stringstream ss;
     gethostname(hostname, MAX_SIZE);
-    ss << "-> " << getlogin() << "@" << hostname << " "
-       << regex_replace(get_current_dir_name(), regex("/home/" + string(getlogin())), "~") << " shell> ";
+    ss << bold(red("\u21aa ")) << bold(green(getlogin())) << bold(cyan("@")) << bold(green(hostname)) << " "
+       << bold(cyan(regex_replace(get_current_dir_name(), regex("/home/" + string(getlogin())), "~")))
+       << yellow(" shell> ");
     write_stdout(ss.str());
 }
 

@@ -3,4 +3,4 @@ project(unix_command_line_interface)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(unix_command_line_interface main.cpp)
+add_executable(unix_command_line_interface main.cpp colors.cpp)
