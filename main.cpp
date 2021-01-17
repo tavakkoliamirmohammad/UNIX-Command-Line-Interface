@@ -13,6 +13,8 @@ using namespace std;
 // TODO path next to shell
 // TODO username next to shell
 // TODO clear shell
+// TODO fix string space bug
+// TODO arrow key
 
 void exit_with_message(const string &message, int exit_status) {
     write(STDERR_FILENO, message.c_str(), message.length());
@@ -103,14 +105,12 @@ void execute_commands(const vector<string> &commands, int &background_process_nu
     for (const string &command:commands) {
         vector<string> tokenize_command = tokenize_string(command, " ");
         vector<char *> arguments;
-        if (tokenize_command.size() > 1) {
-            arguments.reserve(tokenize_command.size() - 1);
-        }
+        arguments.reserve(tokenize_command.size() + 1);
         for (const string &token : tokenize_command) {
             arguments.push_back(const_cast<char *>(token.c_str()));
         }
         arguments.push_back(nullptr);
-        string file = tokenize_command[0];
+        string file = arguments[0];
         if (file == "cd") {
             if (arguments.size() > 1 && arguments[1]) {
                 chdir(arguments[1]);
