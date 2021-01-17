@@ -2,10 +2,11 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <sys/wait.h>
 
 using namespace std;
 
-void exit_with_message(string &message, int exit_status) {
+void exit_with_message(const string &message, int exit_status) {
     write(STDERR_FILENO, message.c_str(), message.length());
     exit(exit_status);
 }
@@ -38,10 +39,14 @@ vector<string> tokenize_string(string line, const string &delimiter) {
     while ((pos = line.find(delimiter)) != std::string::npos) {
         token = line.substr(0, pos);
         commands.push_back(trim(token));
-        line.erase(0, pos + delimiter.length());
+        line = trim(line.erase(0, pos + delimiter.length()));
     }
     commands.push_back(trim(line));
     return commands;
+}
+
+int foreground_process(vector<char *> args) {
+    return execvp(args[0], &args[0]);
 }
 
 void execute_commands(const vector<string> &commands) {
@@ -51,13 +56,14 @@ void execute_commands(const vector<string> &commands) {
         if (tokenize_command.size() > 1) {
             arguments.reserve(tokenize_command.size() - 1);
         }
-        for (int i = 1; i < tokenize_command.size(); ++i) {
-            arguments.push_back(const_cast<char *>(tokenize_command[i].c_str()));
+        for (const string &token : tokenize_command) {
+            arguments.push_back(const_cast<char *>(token.c_str()));
         }
+        arguments.push_back(NULL);
         string file = tokenize_command[0];
         if (file == "cd") {
-            if (arguments.size() > 1 && arguments[0]) {
-                chdir(arguments[0]);
+            if (arguments.size() > 1 && arguments[1]) {
+                chdir(arguments[1]);
 //                TODO check result
             } else {
                 chdir(getenv("HOME"));
@@ -70,6 +76,21 @@ void execute_commands(const vector<string> &commands) {
             write_stdout(message);
         } else if (file == "exit") {
             exit(0);
+        } else {
+            int pid = fork();
+            if (pid < 0) {
+                exit_with_message("Error: Fork failed!", 1);
+            } else if (pid == 0) {
+                foreground_process(arguments);
+            } else {
+                while (1) {
+                    pid_t done = wait(NULL);
+                    if (done == -1) {
+                        break;
+                    }
+                }
+
+            }
         }
     }
 }
