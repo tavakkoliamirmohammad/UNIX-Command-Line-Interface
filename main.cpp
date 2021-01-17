@@ -9,6 +9,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <unordered_map>
+#include <csignal>
 
 // TODO write in file
 // TODO fix string space bug
@@ -112,8 +113,8 @@ void background_process(vector<char *> args, unordered_map<pid_t, string> &backg
 void check_background_process_finished(unordered_map<pid_t, string> &background_processes) {
     pid_t pid_finished = waitpid(-1, nullptr, WNOHANG);
     if (pid_finished > 0) {
-        write_stdout("Background process with " + to_string(pid_finished) + " finished\n");
         background_processes.erase(pid_finished);
+        write_stdout("Background process with " + to_string(pid_finished) + " finished\n");
     }
 }
 
@@ -130,6 +131,38 @@ void show_background_process(unordered_map<pid_t, string> &background_processes)
     write_stdout(ss.str());
 }
 
+void background_process_signal(pid_t pid, int signal) {
+    int res = kill(pid, signal);
+    if (res == -1) {
+        write_stderr(strerror(errno));
+    }
+}
+
+pid_t get_nth_background_process(unordered_map<pid_t, string> &background_processes, int n) {
+    int i = 1;
+    for (auto &process : background_processes) {
+        if (i == n) {
+            return process.first;
+        }
+        ++i;
+    }
+    return -1;
+}
+
+void change_directory(vector<char *> args){
+    if (args.size() > 1 && args[1]) {
+        int res = chdir(args[1]);
+        if (res == -1) {
+            show_error_command(args);
+        }
+    } else {
+        int res = chdir(getenv("HOME"));
+        if (res == -1) {
+            show_error_command(args);
+        }
+    }
+}
+
 void execute_commands(const vector<string> &commands, unordered_map<pid_t, string> &background_processes,
                       int maximum_background_process) {
     for (const string &command:commands) {
@@ -142,13 +175,7 @@ void execute_commands(const vector<string> &commands, unordered_map<pid_t, strin
         arguments.push_back(nullptr);
         string file = arguments[0];
         if (file == "cd") {
-            if (arguments.size() > 1 && arguments[1]) {
-                chdir(arguments[1]);
-                show_error_command(arguments);
-//               TODO check result
-            } else {
-                chdir(getenv("HOME"));
-            }
+            change_directory(arguments);
         } else if (file == "pwd") {
             char temp[MAX_SIZE];
             getcwd(temp, MAX_SIZE);
@@ -159,6 +186,36 @@ void execute_commands(const vector<string> &commands, unordered_map<pid_t, strin
             exit(0);
         } else if (file == "bglist") {
             show_background_process(background_processes);
+        } else if (file == "bgkill") {
+            pid_t pid = get_nth_background_process(background_processes, stoi(arguments[1]));
+            if (pid == -1) {
+                stringstream ss;
+                ss << file << ": " << "Invalid n number" << endl;
+                write_stderr(ss.str());
+                return;
+            }
+            background_process_signal(pid, SIGTERM);
+
+        } else if (file == "bgstop") {
+            pid_t pid = get_nth_background_process(background_processes, stoi(arguments[1]));
+            if (pid == -1) {
+                stringstream ss;
+                ss << file << ": " << "Invalid n number" << endl;
+                write_stderr(ss.str());
+                return;
+            }
+            background_process_signal(pid, SIGSTOP);
+
+        } else if (file == "bgstart") {
+            pid_t pid = get_nth_background_process(background_processes, stoi(arguments[1]));
+            if (pid == -1) {
+                stringstream ss;
+                ss << file << ": " << "Invalid n number" << endl;
+                write_stderr(ss.str());
+                return;
+            }
+            background_process_signal(pid, SIGCONT);
+
         } else if (file == "bg") {
             background_process(arguments, background_processes, maximum_background_process);
         } else {
@@ -173,13 +230,8 @@ int main(int argc, char *argv[]) {
         exit_with_message(error_message, 1);
     }
     istream &input_stream(std::cin);
-
     unordered_map<pid_t, string> background_processes;
-
     char *line;
-
-
-    int background_process_number = 0;
     int maximum_background_process = 5;
     while (!input_stream.eof()) {
         check_background_process_finished(background_processes);
