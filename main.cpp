@@ -19,7 +19,11 @@ void exit_with_message(const string &message, int exit_status) {
     exit(exit_status);
 }
 
-void write_stdout(string &message) {
+void write_stderr(const string &message) {
+    write(STDERR_FILENO, message.c_str(), message.length());
+}
+
+void write_stdout(const string &message) {
     write(STDOUT_FILENO, message.c_str(), message.length());
 }
 
@@ -53,12 +57,49 @@ vector<string> tokenize_string(string line, const string &delimiter) {
     return commands;
 }
 
-int foreground_process(vector<char *> args) {
-    execvp(args[0], &args[0]);
-    exit(1);
+void foreground_process(vector<char *> args) {
+    int status;
+    int pid = fork();
+    if (pid < 0) {
+        exit_with_message("Error: Fork failed!", 1);
+    } else if (pid == 0) {
+        execvp(args[0], &args[0]);
+        exit(1);
+    } else {
+        waitpid(pid, &status, WUNTRACED);
+        int child_return_code = WEXITSTATUS(status);
+        if (child_return_code != 0) {
+            exit_with_message("Error: failed", 2);
+        }
+    }
 }
 
-void execute_commands(const vector<string> &commands) {
+void background_process(vector<char *> args, int &background_process, int maximum_background_process) {
+    if (background_process == maximum_background_process) {
+        write_stderr("Error: Maximum number of background processes\n");
+        return;
+    }
+    ++background_process;
+    int pid = fork();
+    if (pid < 0) {
+        exit_with_message("Error: Fork failed!", 1);
+    } else if (pid == 0) {
+        execvp(args[1], &args[1]);
+        exit(1);
+    } else {
+        write_stdout("Background process with " + to_string(pid) + " Executing\n");
+    }
+}
+
+void check_background_process_finished(int &background_process_number) {
+    int status = waitpid(-1, nullptr, WNOHANG);
+    if (status > 0) {
+        write_stdout("Background process with " + to_string(status) + " finished\n");
+        background_process_number--;
+    }
+}
+
+void execute_commands(const vector<string> &commands, int &background_process_number, int maximum_background_process) {
     for (const string &command:commands) {
         vector<string> tokenize_command = tokenize_string(command, " ");
         vector<char *> arguments;
@@ -85,20 +126,10 @@ void execute_commands(const vector<string> &commands) {
             write_stdout(message);
         } else if (file == "exit") {
             exit(0);
+        } else if (file == "bg") {
+            background_process(arguments, background_process_number, maximum_background_process);
         } else {
-            int status;
-            int pid = fork();
-            if (pid < 0) {
-                exit_with_message("Error: Fork failed!", 1);
-            } else if (pid == 0) {
-                foreground_process(arguments);
-            } else {
-                waitpid(-1, &status, WUNTRACED);
-                int child_return_code = WEXITSTATUS(status);
-                if (child_return_code != 0) {
-                    exit_with_message("Error: failed", 2);
-                }
-            }
+            foreground_process(arguments);
         }
     }
 }
@@ -111,11 +142,14 @@ int main(int argc, char *argv[]) {
     istream &input_stream(std::cin);
     string line;
 
+    int background_process_number = 0;
+    int maximum_background_process = 5;
     while (!input_stream.eof()) {
+        check_background_process_finished(background_process_number);
         write_shell_prefix();
         getline(input_stream, line);
         vector<string> commands = tokenize_string(line, "&&");
-        execute_commands(commands);
+        execute_commands(commands, background_process_number, maximum_background_process);
     }
     return 0;
 
