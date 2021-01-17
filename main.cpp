@@ -6,6 +6,13 @@
 
 using namespace std;
 
+//TODO history command and select command
+//TODO write in file
+// TODO Coloring
+// TODO sudo
+// TODO path next to shell
+// TODO username next to shell
+
 void exit_with_message(const string &message, int exit_status) {
     write(STDERR_FILENO, message.c_str(), message.length());
     exit(exit_status);
