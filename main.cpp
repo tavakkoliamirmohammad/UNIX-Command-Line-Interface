@@ -6,12 +6,13 @@
 
 using namespace std;
 
-//TODO history command and select command
-//TODO write in file
+// TODO history command and select command
+// TODO write in file
 // TODO Coloring
 // TODO sudo
 // TODO path next to shell
 // TODO username next to shell
+// TODO clear shell
 
 void exit_with_message(const string &message, int exit_status) {
     write(STDERR_FILENO, message.c_str(), message.length());
@@ -28,11 +29,11 @@ void write_shell_prefix() {
 }
 
 string &rtrim(std::string &s, const char *t = " \t\n\r\f\v") {
-    return s.erase(s.find_last_not_of(t) + 1);;
+    return s.erase(s.find_last_not_of(t) + 1);
 }
 
 string &ltrim(std::string &s, const char *t = " \t\n\r\f\v") {
-    return s.erase(0, s.find_first_not_of(t));;
+    return s.erase(0, s.find_first_not_of(t));
 }
 
 string &trim(std::string &s, const char *t = " \t\n\r\f\v") {
@@ -53,11 +54,12 @@ vector<string> tokenize_string(string line, const string &delimiter) {
 }
 
 int foreground_process(vector<char *> args) {
-    return execvp(args[0], &args[0]);
+    execvp(args[0], &args[0]);
+    exit(1);
 }
 
 void execute_commands(const vector<string> &commands) {
-    for (string command:commands) {
+    for (const string &command:commands) {
         vector<string> tokenize_command = tokenize_string(command, " ");
         vector<char *> arguments;
         if (tokenize_command.size() > 1) {
@@ -66,7 +68,7 @@ void execute_commands(const vector<string> &commands) {
         for (const string &token : tokenize_command) {
             arguments.push_back(const_cast<char *>(token.c_str()));
         }
-        arguments.push_back(NULL);
+        arguments.push_back(nullptr);
         string file = tokenize_command[0];
         if (file == "cd") {
             if (arguments.size() > 1 && arguments[1]) {
@@ -84,19 +86,18 @@ void execute_commands(const vector<string> &commands) {
         } else if (file == "exit") {
             exit(0);
         } else {
+            int status;
             int pid = fork();
             if (pid < 0) {
                 exit_with_message("Error: Fork failed!", 1);
             } else if (pid == 0) {
                 foreground_process(arguments);
             } else {
-                while (1) {
-                    pid_t done = wait(NULL);
-                    if (done == -1) {
-                        break;
-                    }
+                waitpid(-1, &status, WUNTRACED);
+                int child_return_code = WEXITSTATUS(status);
+                if (child_return_code != 0) {
+                    exit_with_message("Error: failed", 2);
                 }
-
             }
         }
     }
