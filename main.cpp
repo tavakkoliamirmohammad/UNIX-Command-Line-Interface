@@ -8,6 +8,7 @@
 
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <unordered_map>
 
 // TODO write in file
 // TODO fix string space bug
@@ -83,19 +84,18 @@ void foreground_process(vector<char *> args) {
     } else {
         waitpid(pid, &status, WUNTRACED);
         int child_return_code = WEXITSTATUS(status);
-        cout << child_return_code << endl;
 //        if (child_return_code != 0) {
 //            exit_with_message("Error: failed", 2);
 //        }
     }
 }
 
-void background_process(vector<char *> args, int &background_process, int maximum_background_process) {
-    if (background_process == maximum_background_process) {
+void background_process(vector<char *> args, unordered_map<pid_t, string> &background_processes_list,
+                        int maximum_background_process) {
+    if (background_processes_list.size() == maximum_background_process) {
         write_stderr("Error: Maximum number of background processes\n");
         return;
     }
-    ++background_process;
     int pid = fork();
     if (pid < 0) {
         exit_with_message("Error: Fork failed!", 1);
@@ -104,19 +104,34 @@ void background_process(vector<char *> args, int &background_process, int maximu
         show_error_command(vector<char *>(args.begin() + 1, args.end()));
 //        exit(1);
     } else {
+        background_processes_list[pid] = args[1];
         write_stdout("Background process with " + to_string(pid) + " Executing\n");
     }
 }
 
-void check_background_process_finished(int &background_process_number) {
-    int status = waitpid(-1, nullptr, WNOHANG);
-    if (status > 0) {
-        write_stdout("Background process with " + to_string(status) + " finished\n");
-        background_process_number--;
+void check_background_process_finished(unordered_map<pid_t, string> &background_processes) {
+    pid_t pid_finished = waitpid(-1, nullptr, WNOHANG);
+    if (pid_finished > 0) {
+        write_stdout("Background process with " + to_string(pid_finished) + " finished\n");
+        background_processes.erase(pid_finished);
     }
 }
 
-void execute_commands(const vector<string> &commands, int &background_process_number, int maximum_background_process) {
+void show_background_process(unordered_map<pid_t, string> &background_processes) {
+    int i = 0;
+    for (auto &process : background_processes) {
+        stringstream ss;
+        ++i;
+        ss << "(" << i << ")" << " " << process.second << endl;
+        write_stdout(ss.str());
+    }
+    stringstream ss;
+    ss << "Total Background Jobs: " << i << endl;
+    write_stdout(ss.str());
+}
+
+void execute_commands(const vector<string> &commands, unordered_map<pid_t, string> &background_processes,
+                      int maximum_background_process) {
     for (const string &command:commands) {
         vector<string> tokenize_command = tokenize_string(command, " ");
         vector<char *> arguments;
@@ -142,8 +157,10 @@ void execute_commands(const vector<string> &commands, int &background_process_nu
             write_stdout(message);
         } else if (file == "exit") {
             exit(0);
+        } else if (file == "bglist") {
+            show_background_process(background_processes);
         } else if (file == "bg") {
-            background_process(arguments, background_process_number, maximum_background_process);
+            background_process(arguments, background_processes, maximum_background_process);
         } else {
             foreground_process(arguments);
         }
@@ -156,19 +173,22 @@ int main(int argc, char *argv[]) {
         exit_with_message(error_message, 1);
     }
     istream &input_stream(std::cin);
+
+    unordered_map<pid_t, string> background_processes;
+
     char *line;
 
 
     int background_process_number = 0;
     int maximum_background_process = 5;
     while (!input_stream.eof()) {
-        check_background_process_finished(background_process_number);
+        check_background_process_finished(background_processes);
 
         line = readline(write_shell_prefix().c_str());
         if (*line) add_history(line);
 //        getline(input_stream, line);
         vector<string> commands = tokenize_string(line, "&&");
-        execute_commands(commands, background_process_number, maximum_background_process);
+        execute_commands(commands, background_processes, maximum_background_process);
         free(line);
     }
     return 0;
