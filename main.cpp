@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <fcntl.h>
 #include <sys/wait.h>
 #include <regex>
 #include "colors.h"
@@ -9,7 +10,6 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <unordered_map>
-#include <csignal>
 
 // TODO write in file
 // TODO fix string space bug
@@ -73,14 +73,26 @@ vector<string> tokenize_string(string line, const string &delimiter) {
     return commands;
 }
 
-void foreground_process(vector<char *> args) {
+void foreground_process(vector<char *> args, const string &filename, int flag) {
     int status;
     int pid = fork();
     if (pid < 0) {
         exit_with_message("Error: Fork failed!", 1);
     } else if (pid == 0) {
+        int out;
+        if (flag) {
+            out = open(filename.c_str(), O_RDWR | O_CREAT, 0666);
+            if (out < 0) {
+                write_stderr("An error has occurred\n");
+                exit(1);
+            }
+            dup2(out, STDOUT_FILENO);
+        }
         execvp(args[0], &args[0]);
         show_error_command(args);
+        if (flag) {
+            close(out);
+        }
         exit(0);
     } else {
         waitpid(pid, &status, WUNTRACED);
@@ -92,7 +104,7 @@ void foreground_process(vector<char *> args) {
 }
 
 void background_process(vector<char *> args, unordered_map<pid_t, string> &background_processes_list,
-                        int maximum_background_process) {
+                        int maximum_background_process, const string &filename, int flag) {
     if (background_processes_list.size() == maximum_background_process) {
         write_stderr("Error: Maximum number of background processes\n");
         return;
@@ -101,9 +113,21 @@ void background_process(vector<char *> args, unordered_map<pid_t, string> &backg
     if (pid < 0) {
         exit_with_message("Error: Fork failed!", 1);
     } else if (pid == 0) {
+        int out;
+        if (flag) {
+            out = open(filename.c_str(), O_RDWR | O_CREAT, 0666);
+            if (out < 0) {
+                write_stderr("An error has occurred\n");
+                exit(1);
+            }
+            dup2(out, STDOUT_FILENO);
+        }
         execvp(args[1], &args[1]);
         show_error_command(vector<char *>(args.begin() + 1, args.end()));
-//        exit(1);
+        if (flag) {
+            close(out);
+        }
+        exit(1);
     } else {
         background_processes_list[pid] = args[1];
         write_stdout("Background process with " + to_string(pid) + " Executing\n");
@@ -187,7 +211,16 @@ void show_current_directory(vector<char *> args) {
 
 void execute_commands(const vector<string> &commands, unordered_map<pid_t, string> &background_processes,
                       int maximum_background_process) {
-    for (const string &command:commands) {
+    for (string command:commands) {
+        vector<string> temp = tokenize_string(command, ">");
+        int flag = 0;
+        string filename;
+        if (temp.size() > 1) {
+            command = temp[0];
+            filename = temp[1];
+            flag = 1;
+        }
+
         vector<string> tokenize_command = tokenize_string(command, " ");
         vector<char *> arguments;
         arguments.reserve(tokenize_command.size() + 1);
@@ -235,9 +268,9 @@ void execute_commands(const vector<string> &commands, unordered_map<pid_t, strin
             background_process_signal(pid, SIGCONT);
 
         } else if (file == "bg") {
-            background_process(arguments, background_processes, maximum_background_process);
+            background_process(arguments, background_processes, maximum_background_process, filename, flag);
         } else {
-            foreground_process(arguments);
+            foreground_process(arguments, filename, flag);
         }
     }
 }
@@ -247,25 +280,23 @@ int main(int argc, char *argv[]) {
         string error_message = "An error has occurred\n";
         exit_with_message(error_message, 1);
     }
-    istream &input_stream(std::cin);
     unordered_map<pid_t, string> background_processes;
     char *line;
     int maximum_background_process = 5;
-    using_history();
-    stifle_history(10);
-    while (!input_stream.eof()) {
+//    using_history();
+//    stifle_history(10);
+    while (true) {
         line = readline(write_shell_prefix().c_str());
-//        if (where_history() >= 1) {
-//            cout << history_get(where_history())->line << endl;
-//        }
-        int offset = where_history();
+//        int offset = where_history();
         if (*line) {
-            if(offset >= 1 && strcmp(line, history_get(offset)->line) != 0){
-                add_history(line);
-            }
-            else if(offset == 0){
-                add_history(line);
-            }
+            add_history(line);
+//            if (offset >= 1 && strcmp(line, history_get(offset)->line) != 0) {
+//                add_history(line);
+//            } else if (offset == 0) {
+//                add_history(line);
+//            }
+        } else{
+            break;
         }
 //        getline(input_stream, line);
         check_background_process_finished(background_processes);
