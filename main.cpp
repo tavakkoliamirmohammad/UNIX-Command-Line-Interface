@@ -111,10 +111,16 @@ void background_process(vector<char *> args, unordered_map<pid_t, string> &backg
 }
 
 void check_background_process_finished(unordered_map<pid_t, string> &background_processes) {
-    pid_t pid_finished = waitpid(-1, nullptr, WNOHANG);
+    int status;
+    pid_t pid_finished = waitpid(-1, &status, WNOHANG);
     if (pid_finished > 0) {
-        background_processes.erase(pid_finished);
-        write_stdout("Background process with " + to_string(pid_finished) + " finished\n");
+        if (WIFCONTINUED(status)) {
+            write_stdout("Background process with " + to_string(pid_finished) + " Continued\n");
+        } else if (WIFSIGNALED(status)) {
+            background_processes.erase(pid_finished);
+            write_stdout("Background process with " + to_string(pid_finished) + " finished\n");
+        }
+
     }
 }
 
