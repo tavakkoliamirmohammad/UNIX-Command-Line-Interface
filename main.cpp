@@ -6,17 +6,11 @@
 #include <regex>
 #include "colors.h"
 
-using namespace std;
+#include <readline/readline.h>
+#include <readline/history.h>
 
-// TODO history command and select command
 // TODO write in file
-// TODO Coloring
-// TODO sudo
-// TODO path next to shell
-// TODO username next to shell
-// TODO clear shell
 // TODO fix string space bug
-// TODO arrow key
 
 #define MAX_SIZE 1024
 
@@ -35,13 +29,14 @@ void write_stdout(const string &message) {
 
 char hostname[MAX_SIZE];
 
-void write_shell_prefix() {
+string write_shell_prefix() {
     std::stringstream ss;
     gethostname(hostname, MAX_SIZE);
     ss << bold(red("\u21aa ")) << bold(green(getlogin())) << bold(cyan("@")) << bold(green(hostname)) << " "
        << bold(cyan(regex_replace(get_current_dir_name(), regex("/home/" + string(getlogin())), "~")))
        << yellow(" shell> ");
-    write_stdout(ss.str());
+//    write_stdout(ss.str());
+    return ss.str();
 }
 
 string &rtrim(std::string &s, const char *t = " \t\n\r\f\v") {
@@ -76,7 +71,9 @@ void foreground_process(vector<char *> args) {
         exit_with_message("Error: Fork failed!", 1);
     } else if (pid == 0) {
         execvp(args[0], &args[0]);
-        exit(1);
+        write_stdout(strerror(errno));
+        write_stdout("\n");
+//        exit(1);
     } else {
         waitpid(pid, &status, WUNTRACED);
         int child_return_code = WEXITSTATUS(status);
@@ -97,7 +94,9 @@ void background_process(vector<char *> args, int &background_process, int maximu
         exit_with_message("Error: Fork failed!", 1);
     } else if (pid == 0) {
         execvp(args[1], &args[1]);
-        exit(1);
+        write_stdout(strerror(errno));
+        write_stdout("\n");
+//        exit(1);
     } else {
         write_stdout("Background process with " + to_string(pid) + " Executing\n");
     }
@@ -150,16 +149,20 @@ int main(int argc, char *argv[]) {
         exit_with_message(error_message, 1);
     }
     istream &input_stream(std::cin);
-    string line;
+    char *line;
+
 
     int background_process_number = 0;
     int maximum_background_process = 5;
     while (!input_stream.eof()) {
         check_background_process_finished(background_process_number);
-        write_shell_prefix();
-        getline(input_stream, line);
+
+        line = readline(write_shell_prefix().c_str());
+        if (*line) add_history(line);
+//        getline(input_stream, line);
         vector<string> commands = tokenize_string(line, "&&");
         execute_commands(commands, background_process_number, maximum_background_process);
+        free(line);
     }
     return 0;
 
