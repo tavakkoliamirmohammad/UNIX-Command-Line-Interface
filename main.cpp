@@ -44,6 +44,36 @@ vector<string> tokenize_string(string line, const string &delimiter) {
     return commands;
 }
 
+void execute_commands(const vector<string> &commands) {
+    for (string command:commands) {
+        vector<string> tokenize_command = tokenize_string(command, " ");
+        vector<char *> arguments;
+        if (tokenize_command.size() > 1) {
+            arguments.reserve(tokenize_command.size() - 1);
+        }
+        for (int i = 1; i < tokenize_command.size(); ++i) {
+            arguments.push_back(const_cast<char *>(tokenize_command[i].c_str()));
+        }
+        string file = tokenize_command[0];
+        if (file == "cd") {
+            if (arguments.size() > 1 && arguments[0]) {
+                chdir(arguments[0]);
+//                TODO check result
+            } else {
+                chdir(getenv("HOME"));
+            }
+        } else if (file == "pwd") {
+            char temp[1000];
+            getcwd(temp, 1000);
+            string message = string(temp);
+            message += "\n";
+            write_stdout(message);
+        } else if (file == "exit") {
+            exit(0);
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 1) {
         string error_message = "An error has occurred\n";
@@ -56,6 +86,7 @@ int main(int argc, char *argv[]) {
         write_shell_prefix();
         getline(input_stream, line);
         vector<string> commands = tokenize_string(line, "&&");
+        execute_commands(commands);
     }
     return 0;
 
