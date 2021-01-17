@@ -116,11 +116,9 @@ void check_background_process_finished(unordered_map<pid_t, string> &background_
     if (pid_finished > 0) {
         if (WIFCONTINUED(status)) {
             write_stdout("Background process with " + to_string(pid_finished) + " Continued\n");
-        }
-        else if (WIFSTOPPED(status)) {
+        } else if (WIFSTOPPED(status)) {
             write_stdout("Background process with " + to_string(pid_finished) + " Stopped\n");
-        }
-        else if (WIFSIGNALED(status)) {
+        } else if (WIFEXITED(status) || WIFSIGNALED(status)) {
             background_processes.erase(pid_finished);
             write_stdout("Background process with " + to_string(pid_finished) + " finished\n");
         }
@@ -253,15 +251,28 @@ int main(int argc, char *argv[]) {
     unordered_map<pid_t, string> background_processes;
     char *line;
     int maximum_background_process = 5;
+    using_history();
+    stifle_history(10);
     while (!input_stream.eof()) {
         line = readline(write_shell_prefix().c_str());
-        if (*line) add_history(line);
+//        if (where_history() >= 1) {
+//            cout << history_get(where_history())->line << endl;
+//        }
+        int offset = where_history();
+        if (*line) {
+            if(offset >= 1 && strcmp(line, history_get(offset)->line) != 0){
+                add_history(line);
+            }
+            else if(offset == 0){
+                add_history(line);
+            }
+        }
 //        getline(input_stream, line);
         check_background_process_finished(background_processes);
         vector<string> commands = tokenize_string(line, "&&");
         execute_commands(commands, background_processes, maximum_background_process);
+        check_background_process_finished(background_processes);
         free(line);
     }
     return 0;
-
 }
