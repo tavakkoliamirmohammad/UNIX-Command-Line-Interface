@@ -3,6 +3,7 @@
 #include <vector>
 #include <iostream>
 #include <sys/wait.h>
+#include <regex>
 
 using namespace std;
 
@@ -15,6 +16,8 @@ using namespace std;
 // TODO clear shell
 // TODO fix string space bug
 // TODO arrow key
+
+#define MAX_SIZE 1024
 
 void exit_with_message(const string &message, int exit_status) {
     write(STDERR_FILENO, message.c_str(), message.length());
@@ -29,9 +32,14 @@ void write_stdout(const string &message) {
     write(STDOUT_FILENO, message.c_str(), message.length());
 }
 
+char hostname[MAX_SIZE];
+
 void write_shell_prefix() {
-    string prefix = "shell> ";
-    write_stdout(prefix);
+    std::stringstream ss;
+    gethostname(hostname, MAX_SIZE);
+    ss << "-> " << getlogin() << "@" << hostname << " "
+       << regex_replace(get_current_dir_name(), regex("/home/" + string(getlogin())), "~") << " shell> ";
+    write_stdout(ss.str());
 }
 
 string &rtrim(std::string &s, const char *t = " \t\n\r\f\v") {
@@ -119,8 +127,8 @@ void execute_commands(const vector<string> &commands, int &background_process_nu
                 chdir(getenv("HOME"));
             }
         } else if (file == "pwd") {
-            char temp[1000];
-            getcwd(temp, 1000);
+            char temp[MAX_SIZE];
+            getcwd(temp, MAX_SIZE);
             string message = string(temp);
             message += "\n";
             write_stdout(message);
