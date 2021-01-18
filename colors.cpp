@@ -49,12 +49,12 @@ string red(const string &x) {
 
 string bold(const string &x) {
     stringstream ss;
-    ss << "\x1B[1m" << x << RST;
+    ss << "\001\x1B[1m\002" << x << RST;
     return ss.str();
 }
 
 string underline(const string &x) {
     stringstream ss;
-    ss << "\x1B[4m" << x << RST;
+    ss << "\001\x1B[4m\002" << x << RST;
     return ss.str();
 }

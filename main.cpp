@@ -32,10 +32,12 @@ void write_stdout(const string &message) {
 char hostname[MAX_SIZE];
 
 string write_shell_prefix() {
+    stringstream ss;
     gethostname(hostname, MAX_SIZE);
-    string result =  "\u21aa " + string(getlogin()) + "@" + hostname + " "
-                    + regex_replace(get_current_dir_name(), regex("/home/" + string(getlogin())), "~") + " shell> ";
-    return result;
+    ss << bold(red("\u21aa ")) << bold(green(getlogin())) << bold(cyan("@")) << bold(green(hostname)) << " "
+       << bold(cyan(regex_replace(get_current_dir_name(), regex("/home/" + string(getlogin())), "~")))
+       << bold(yellow(" shell> "));
+    return ss.str();
 }
 
 string &rtrim(std::string &s, const char *t = " \t\n\r\f\v") {

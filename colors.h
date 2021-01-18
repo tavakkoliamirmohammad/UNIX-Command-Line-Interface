@@ -8,14 +8,14 @@ using namespace std;
 
 
 /* FOREGROUND */
-#define RST  "\x1B[0m"
-#define KRED  "\x1B[31m"
-#define KGRN  "\x1B[32m"
-#define KYEL  "\x1B[33m"
-#define KBLU  "\x1B[34m"
-#define KMAG  "\x1B[35m"
-#define KCYN  "\x1B[36m"
-#define KWHT  "\x1B[37m"
+#define RST  "\001\e[0m\002"
+#define KRED  "\001\e[1m\e[31m\002"
+#define KGRN  "\001\e[32m\002"
+#define KYEL  "\001\x1B[33m\002"
+#define KBLU  "\001\e[34m\002"
+#define KMAG  "\001\x1B[35m\002"
+#define KCYN  "\001\x1B[36m\002"
+#define KWHT  "\001\x1B[37m\002"
 
 
 string green(const string &x);
