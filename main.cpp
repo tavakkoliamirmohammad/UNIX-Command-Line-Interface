@@ -221,8 +221,9 @@ void execute_commands(const vector<string> &commands, unordered_map<pid_t, strin
         }
 
         vector<string> tokenize_command = tokenize_string(command, " ");
+        tokenize_command.emplace_back("--color=auto");
         vector<char *> arguments;
-        arguments.reserve(tokenize_command.size() + 1);
+        arguments.reserve(tokenize_command.size() + 2);
         for (const string &token : tokenize_command) {
             arguments.push_back(const_cast<char *>(token.c_str()));
         }
