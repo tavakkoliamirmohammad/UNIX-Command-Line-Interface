@@ -287,14 +287,13 @@ int main(int argc, char *argv[]) {
     stifle_history(10);
     while (true) {
         line = readline(write_shell_prefix().c_str());
-//        int offset = where_history();
+        int offset = where_history();
         if (*line) {
-            add_history(line);
-//            if (offset >= 1 && strcmp(line, history_get(offset)->line) != 0) {
-//                add_history(line);
-//            } else if (offset == 0) {
-//                add_history(line);
-//            }
+            if (offset >= 1 && strcmp(line, history_get(offset)->line) != 0) {
+                add_history(line);
+            } else if (offset == 0) {
+                add_history(line);
+            }
         } else {
             break;
         }
