@@ -32,13 +32,10 @@ void write_stdout(const string &message) {
 char hostname[MAX_SIZE];
 
 string write_shell_prefix() {
-    std::stringstream ss;
     gethostname(hostname, MAX_SIZE);
-    ss << bold(red("\u21aa ")) << bold(green(getlogin())) << bold(cyan("@")) << bold(green(hostname)) << " "
-       << bold(cyan(regex_replace(get_current_dir_name(), regex("/home/" + string(getlogin())), "~")))
-       << yellow(" shell> ");
-//    write_stdout(ss.str());
-    return ss.str();
+    string result =  "\u21aa " + string(getlogin()) + "@" + hostname + " "
+                    + regex_replace(get_current_dir_name(), regex("/home/" + string(getlogin())), "~") + " shell> ";
+    return result;
 }
 
 string &rtrim(std::string &s, const char *t = " \t\n\r\f\v") {
@@ -283,8 +280,9 @@ int main(int argc, char *argv[]) {
     unordered_map<pid_t, string> background_processes;
     char *line;
     int maximum_background_process = 5;
-//    using_history();
-//    stifle_history(10);
+    rl_initialize();
+    using_history();
+    stifle_history(10);
     while (true) {
         line = readline(write_shell_prefix().c_str());
 //        int offset = where_history();
@@ -295,7 +293,7 @@ int main(int argc, char *argv[]) {
 //            } else if (offset == 0) {
 //                add_history(line);
 //            }
-        } else{
+        } else {
             break;
         }
 //        getline(input_stream, line);
