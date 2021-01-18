@@ -182,7 +182,7 @@ pid_t get_nth_background_process(unordered_map<pid_t, string> &background_proces
 }
 
 void change_directory(vector<char *> args) {
-    if (args.size() > 1 && args[1]) {
+    if (args.size() > 3 && args[1]) {
         int res = chdir(args[1]);
         if (res == -1) {
             show_error_command(args);
