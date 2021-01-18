@@ -10,11 +10,14 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <unordered_map>
+#include <unordered_set>
 
 // TODO write in file
 // TODO fix string space bug
 
 #define MAX_SIZE 1024
+
+unordered_set<string> colorful_commands = {"ls", "la", "ll", "less", "grep", "egrep", "fgrep", "zgrep"};
 
 void exit_with_message(const string &message, int exit_status) {
     write(STDERR_FILENO, message.c_str(), message.length());
@@ -221,7 +224,9 @@ void execute_commands(const vector<string> &commands, unordered_map<pid_t, strin
         }
 
         vector<string> tokenize_command = tokenize_string(command, " ");
-        tokenize_command.emplace_back("--color=auto");
+        if (colorful_commands.find(tokenize_command[0]) != colorful_commands.end()) {
+            tokenize_command.emplace_back("--color=auto");
+        }
         vector<char *> arguments;
         arguments.reserve(tokenize_command.size() + 2);
         for (const string &token : tokenize_command) {
