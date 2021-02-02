@@ -12,8 +12,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
-// TODO write in file
 // TODO fix string space bug
+//TODO add piping
 
 #define MAX_SIZE 1024
 
@@ -63,15 +63,10 @@ void show_error_command(const vector<char *> &args) {
 }
 
 vector<string> tokenize_string(string line, const string &delimiter) {
-    size_t pos;
-    std::string token;
-    vector<string> commands;
-    while ((pos = line.find(delimiter)) != std::string::npos) {
-        token = line.substr(0, pos);
-        commands.push_back(trim(token));
-        line = trim(line.erase(0, pos + delimiter.length()));
-    }
-    commands.push_back(trim(line));
+    string regularExpression = delimiter + R"((?=(?:[^\"]*\"[^\"]*\")*[^\"]*$))";
+    regex e(regularExpression);
+    regex_token_iterator<string::iterator> it(line.begin(), line.end(), e, -1);
+    vector<string> commands{it, {}};
     return commands;
 }
 
@@ -301,7 +296,7 @@ int main(int argc, char *argv[]) {
                 add_history(line);
             }
         } else {
-            break;
+            continue;
         }
 //        getline(input_stream, line);
         check_background_process_finished(background_processes);

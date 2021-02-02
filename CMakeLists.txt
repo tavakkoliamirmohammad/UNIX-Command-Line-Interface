@@ -4,3 +4,4 @@ project(unix_command_line_interface)
 set(CMAKE_CXX_STANDARD 11)
 
 add_executable(unix_command_line_interface main.cpp colors.cpp)
+target_link_libraries(unix_command_line_interface -lreadline)
