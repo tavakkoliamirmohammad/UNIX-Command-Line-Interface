@@ -67,6 +67,17 @@ vector<string> tokenize_string(string line, const string &delimiter) {
     regex e(regularExpression);
     regex_token_iterator<string::iterator> it(line.begin(), line.end(), e, -1);
     vector<string> commands{it, {}};
+    commands.erase(
+            remove_if(
+                    commands.begin(), commands.end(),
+                    [](const string& c){ return c.empty();}),
+            commands.end());;
+    for (string &command : commands) {
+        command = trim(command);
+        if (command[0] == '~') {
+            command = regex_replace(command, regex("~"), "/home/" + string(getlogin()));
+        }
+    }
     return commands;
 }
 
@@ -180,7 +191,7 @@ pid_t get_nth_background_process(unordered_map<pid_t, string> &background_proces
 }
 
 void change_directory(vector<char *> args) {
-    if (args.size() > 3 && args[1]) {
+    if (args.size() > 1 && args[1]) {
         int res = chdir(args[1]);
         if (res == -1) {
             show_error_command(args);
@@ -275,6 +286,10 @@ void execute_commands(const vector<string> &commands, unordered_map<pid_t, strin
     }
 }
 
+void f(int signum) {
+
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 1) {
         string error_message = "An error has occurred\n";
@@ -286,6 +301,8 @@ int main(int argc, char *argv[]) {
     rl_initialize();
     using_history();
     stifle_history(10);
+//    execute_commands({"source", "/etc"}, background_processes, maximum_background_process);
+    signal(SIGINT, f);
     while (true) {
         line = readline(write_shell_prefix().c_str());
         int offset = where_history();
