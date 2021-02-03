@@ -245,6 +245,7 @@ void execute_commands(const vector<string> &commands, unordered_map<pid_t, strin
         } else if (file == "pwd") {
             show_current_directory(arguments);
         } else if (file == "exit") {
+            write_stdout("GoodBye! See you soon!\n");
             exit(0);
         } else if (file == "bglist") {
             show_background_process(background_processes);
