@@ -1,6 +1,6 @@
 # Amish (Amir's shell)
 
-This project is dedicated to Opeat
+This the course project of Operating Systems lectured by Dr. Mohammad R. Moosavi.
 
 ## Overview
 
